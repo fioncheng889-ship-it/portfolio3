@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鄭雅蓁 - 個人履歷互動畫布</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 圖標庫 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts 麗緻字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #B28F6E;
+            --primary-dark: #8C6A4A;
+            --primary-light: #FBF9F6;
+            --primary-border: rgba(178, 143, 110, 0.15);
+            --text-dark: #2D2625;
+            --text-muted: #6B6261;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            background-color: #121110; /* 極深質感工作台背景 */
+            color: #E6E4E2;
+            overflow-x: hidden;
+        }
+
+        /* 畫布工作台樣式 */
+        .workspace {
+            min-height: calc(100vh - 64px);
+        }
+
+        /* A4 紙張風格畫布 */
+        .resume-paper {
+            width: 100%;
+            max-width: 800px;
+            min-height: 1130px; /* 黃金 A4 比例高度 */
+            background-color: #ffffff;
+            color: var(--text-dark);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            transform-origin: top center;
+        }
+
+        /* 自訂可編輯欄位高亮提示 */
+        [contenteditable="true"] {
+            outline: none;
+            transition: all 0.2s ease;
+            border-radius: 4px;
+            padding: 1px 4px;
+        }
+        [contenteditable="true"]:hover {
+            background-color: rgba(178, 143, 110, 0.08);
+            box-shadow: 0 0 0 1px var(--primary-color);
+            cursor: text;
+        }
+        [contenteditable="true"]:focus {
+            background-color: rgba(178, 143, 110, 0.12);
+            box-shadow: 0 0 0 2px var(--primary-color);
+        }
+
+        /* 線條與時間軸細緻化 */
+        .timeline-line {
+            border-left: 1.5px dashed var(--primary-border);
+        }
+
+        /* 智慧滾動條 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1918;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3a3836;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-color);
+        }
+
+        /* Lightbox 燈箱效果 */
+        .lightbox-active {
+            overflow: hidden;
+        }
+
+        /* 列印媒體排版優化：只保留 resume-paper 的實體 */
+        @media print {
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .resume-paper {
+                box-shadow: none !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                transform: none !important;
+                min-height: auto !important;
+            }
+            /* 避免列印時發生奇怪的分頁截斷 */
+            .card-section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body class="bg-stone-950 flex flex-col min-h-screen">
+
+    <!-- 頂部工作列 (不列印) -->
+    <header class="no-print bg-stone-900 border-b border-stone-800 px-6 py-3 flex flex-wrap gap-4 items-center justify-between sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-3">
+            <div class="bg-amber-600/20 text-amber-500 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg border border-amber-600/30">
+                <i class="fa-solid fa-compass-drafting"></i>
+            </div>
+            <div>
+                <h1 class="text-white font-bold text-base leading-tight">個人履歷互動設計畫布</h1>
+                <p class="text-xs text-stone-400">雙擊文字可即時編輯 · 支援更換照片與列印</p>
+            </div>
+        </div>
+
+        <!-- 畫布操控群組 -->
+        <div class="flex items-center gap-4 flex-wrap">
+            <!-- 顏色主題 -->
+            <div class="flex items-center gap-2 bg-stone-800/80 px-3 py-1.5 rounded-lg border border-stone-700">
+                <span class="text-xs text-stone-300 font-medium">主題：</span>
+                <div class="flex gap-1.5">
+                    <button onclick="changeTheme('gold')" class="w-5 h-5 rounded-full bg-[#B28F6E] border-2 border-white cursor-pointer hover:scale-110 transition-transform" title="皇家金砂"></button>
+                    <button onclick="changeTheme('dark')" class="w-5 h-5 rounded-full bg-[#2D2625] border border-stone-600 cursor-pointer hover:scale-110 transition-transform" title="摩登深曜"></button>
+                    <button onclick="changeTheme('navy')" class="w-5 h-5 rounded-full bg-[#1e293b] border border-stone-600 cursor-pointer hover:scale-110 transition-transform" title="經理深藍"></button>
+                    <button onclick="changeTheme('green')" class="w-5 h-5 rounded-full bg-[#115e59] border border-stone-600 cursor-pointer hover:scale-110 transition-transform" title="典雅墨綠"></button>
+                </div>
+            </div>
+
+            <!-- 字體縮放控制 -->
+            <div class="flex items-center gap-2 bg-stone-800/80 px-3 py-1.5 rounded-lg border border-stone-700">
+                <span class="text-xs text-stone-300 font-medium"><i class="fa-solid fa-font mr-1"></i>字型大小:</span>
+                <input type="range" id="fontSizeSlider" min="11" max="17" value="14.5" step="0.5" oninput="adjustFontSize(this.value)" class="w-20 accent-amber-500 cursor-pointer">
+                <span id="fontSizeVal" class="text-xs font-semibold text-stone-400 w-8">14.5px</span>
+            </div>
+
+            <!-- 畫布大小縮放控制 -->
+            <div class="flex items-center gap-1.5 bg-stone-800/80 p-1.5 rounded-lg border border-stone-700">
+                <button onclick="zoomCanvas(-0.05)" class="w-7 h-7 text-xs hover:bg-stone-700 rounded text-stone-300 transition-colors" title="縮小畫布"><i class="fa-solid fa-minus"></i></button>
+                <span id="zoomLabel" class="text-xs font-semibold text-stone-300 min-w-[40px] text-center">100%</span>
+                <button onclick="zoomCanvas(0.05)" class="w-7 h-7 text-xs hover:bg-stone-700 rounded text-stone-300 transition-colors" title="放大畫布"><i class="fa-solid fa-plus"></i></button>
+                <button onclick="resetZoom()" class="px-2 py-1 text-[10px] hover:bg-stone-700 rounded text-stone-400 transition-colors" title="重設縮放">1:1</button>
+            </div>
+
+            <!-- 列印/匯出與回復按鈕 -->
+            <button onclick="window.print()" class="bg-amber-600 hover:bg-amber-500 text-white font-medium text-sm px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-amber-600/10 transition-all cursor-pointer">
+                <i class="fa-solid fa-print"></i> 列印 / 匯出 PDF
+            </button>
+        </div>
+    </header>
+
+    <!-- 輕量型通知警示視窗 (不列印) -->
+    <div id="toast" class="no-print fixed bottom-6 right-6 bg-stone-800 border border-stone-700 text-stone-200 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-50 transform translate-y-10 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="w-8 h-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center">
+            <i class="fa-solid fa-circle-info"></i>
+        </div>
+        <span id="toast-msg" class="text-sm font-medium">修改已套用！</span>
+    </div>
+
+    <!-- 主工作畫布區域 -->
+    <main class="workspace flex-1 flex items-start justify-center p-4 md:p-8 overflow-y-auto">
+        <div id="canvasContainer" class="w-full flex justify-center transition-transform duration-200 ease-out">
+            
+            <!-- 實體 A4 履歷紙張 -->
+            <div id="resumeSheet" class="resume-paper p-8 md:p-12 rounded-2xl flex flex-col gap-6">
+                
+                <!-- 裝飾前條 (使用CSS variables控制配色) -->
+                <div id="themeBar" class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#B28F6E] to-[#8C6A4A] transition-all"></div>
+
+                <!-- 首頁頭部：精準左右雙欄排版 (左聯絡、右頭像名字) -->
+                <header class="flex flex-col sm:flex-row justify-between items-stretch gap-6 border-b pb-6 border-stone-100 card-section">
+                    
+                    <!-- 左側：聯絡資訊欄位 (安全遮罩保護隱私) -->
+                    <div class="flex-1 flex flex-col justify-center gap-3 sm:border-r border-stone-100 pr-4">
+                        <div class="grid grid-cols-1 gap-2.5">
+                            
+                            <!-- 出生日期 -->
+                            <div class="flex items-center gap-3">
+                                <div class="accent-bg text-amber-700 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-[#FAF5F0] transition-colors duration-300">
+                                    <i class="fa-regular fa-calendar-days text-[11px]"></i>
+                                </div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-[10px] uppercase tracking-wider font-bold text-amber-700 accent-text">出生日期:</span>
+                                    <span class="text-xs font-semibold text-stone-800" contenteditable="true" id="birthDate">1967.12.05</span>
+                                </div>
+                            </div>
+
+                            <!-- 聯絡電話 -->
+                            <div class="flex items-center gap-3">
+                                <div class="accent-bg text-amber-700 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-[#FAF5F0] transition-colors duration-300">
+                                    <i class="fa-solid fa-phone text-[11px]"></i>
+                                </div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-[10px] uppercase tracking-wider font-bold text-amber-700 accent-text">聯絡電話:</span>
+                                    <span class="text-xs font-semibold text-stone-800" contenteditable="true" id="phoneNum">09XX-XXX-XXX</span>
+                                </div>
+                            </div>
+
+                            <!-- 電子信箱 -->
+                            <div class="flex items-center gap-3">
+                                <div class="accent-bg text-amber-700 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-[#FAF5F0] transition-colors duration-300">
+                                    <i class="fa-regular fa-envelope text-[11px]"></i>
+                                </div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-[10px] uppercase tracking-wider font-bold text-amber-700 accent-text">電子信箱:</span>
+                                    <span class="text-xs font-semibold text-stone-800 break-all" contenteditable="true" id="emailAddress">fion***@gmail.com</span>
+                                </div>
+                            </div>
+
+                            <!-- 通訊地址 -->
+                            <div class="flex items-center gap-3">
+                                <div class="accent-bg text-amber-700 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-[#FAF5F0] transition-colors duration-300">
+                                    <i class="fa-solid fa-map-pin text-[11px]"></i>
+                                </div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-[10px] uppercase tracking-wider font-bold text-amber-700 accent-text">通訊地址:</span>
+                                    <span class="text-xs font-semibold text-stone-800" contenteditable="true" id="livingAddress">桃園市大溪區 (詳細地址已隱藏)</span>
+                                </div>
+                            </div>
+
+                            <!-- 最高學歷 -->
+                            <div class="flex items-center gap-3">
+                                <div class="accent-bg text-amber-700 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-[#FAF5F0] transition-colors duration-300">
+                                    <i class="fa-solid fa-graduation-cap text-[11px]"></i>
+                                </div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-[10px] uppercase tracking-wider font-bold text-amber-700 accent-text">最高學歷:</span>
+                                    <span class="text-xs font-semibold text-stone-800" contenteditable="true" id="education">台南家專服裝設計科</span>
+                                </div>
+                            </div>
+
+                            <!-- 語言能力 -->
+                            <div class="flex items-center gap-3">
+                                <div class="accent-bg text-amber-700 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-[#FAF5F0] transition-colors duration-300">
+                                    <i class="fa-solid fa-language text-[11px]"></i>
+                                </div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-[10px] uppercase tracking-wider font-bold text-amber-700 accent-text">語言能力:</span>
+                                    <span class="text-xs font-semibold text-stone-800" contenteditable="true" id="languageSkill">國語(佳) / 台語(佳) / 英語(可)</span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- 右側：頭像與姓名 -->
+                    <div class="flex flex-col items-center justify-center sm:pl-4 min-w-[200px] flex-shrink-0 self-center">
+                        <div class="relative group cursor-pointer" onclick="triggerAvatarUpload()" title="點擊上傳自訂頭像">
+                            <!-- 實體照片 -->
+                            <div class="w-28 h-28 rounded-full bg-stone-100 border-4 border-white shadow-lg overflow-hidden flex items-center justify-center transition-transform group-hover:scale-105 duration-300">
+                                <img id="avatarImg" src="https://fioncheng889-ship-it.github.io/20260601-ya-2/0469.jpg" alt="鄭雅蓁" class="w-full h-full object-cover">
+                                <!-- 懸浮上傳覆蓋提示 -->
+                                <div class="no-print absolute inset-0 bg-black/40 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                                    <i class="fa-solid fa-camera text-sm mb-1"></i>
+                                    <span class="text-[9px]">上傳相片</span>
+                                </div>
+                            </div>
+                            <!-- 隱藏的頭像檔案輸入 -->
+                            <input type="file" id="avatarInput" accept="image/*" class="hidden" onchange="previewAvatar(event)">
+                        </div>
+                        
+                        <h2 class="text-2xl font-bold text-stone-800 tracking-widest mt-4 text-center" contenteditable="true" id="ownerName">鄭雅蓁</h2>
+                        <p class="text-xs font-semibold text-amber-700 accent-text tracking-wider mt-1 text-center" contenteditable="true" id="ownerTitle">公關與高階商務餐飲顧問</p>
+                    </div>
+
+                </header>
+
+                <!-- 工作經歷 -->
+                <section class="card-section">
+                    <h3 class="text-base font-bold text-stone-800 pb-2 mb-4 border-b-2 border-stone-100 flex items-center gap-2">
+                        <span class="w-1 h-4 bg-amber-700 accent-bg rounded"></span> 工作經歷
+                    </h3>
+                    <div class="timeline flex flex-col gap-5 pl-1.5">
+                        
+                        <!-- 經歷一 -->
+                        <div class="relative pl-6 timeline-line last:border-transparent pb-1">
+                            <span class="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full bg-amber-700 accent-bg ring-4 ring-white shadow"></span>
+                            <span class="text-xs font-bold text-amber-700 accent-text tracking-wide block uppercase" contenteditable="true">民國 99.08 - 103.03</span>
+                            <h4 class="text-sm font-bold text-stone-800 mt-1" contenteditable="true">台北世貿中心國貿大樓世貿聯誼社</h4>
+                            <p class="text-xs text-stone-600 mt-1" contenteditable="true">
+                                <strong>會員中心專員</strong>｜安排會員訂席用餐、處理大型會議流程，並負責喜宴接洽與完整執行流程。
+                            </p>
+                        </div>
+
+                        <!-- 經歷二 -->
+                        <div class="relative pl-6 timeline-line last:border-transparent pb-1">
+                            <span class="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full bg-amber-700 accent-bg ring-4 ring-white shadow"></span>
+                            <span class="text-xs font-bold text-amber-700 accent-text tracking-wide block uppercase" contenteditable="true">民國 92.10 - 96.03</span>
+                            <h4 class="text-sm font-bold text-stone-800 mt-1" contenteditable="true">台北蘇菲雅婚紗攝影公司</h4>
+                            <p class="text-xs text-stone-600 mt-1" contenteditable="true">
+                                <strong>公關</strong>｜負責規劃與執行公司所有對外公關事宜，維護高端VIP顧客關係。
+                            </p>
+                        </div>
+
+                        <!-- 經歷三 -->
+                        <div class="relative pl-6 timeline-line last:border-transparent pb-1">
+                            <span class="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full bg-amber-700 accent-bg ring-4 ring-white shadow"></span>
+                            <span class="text-xs font-bold text-amber-700 accent-text tracking-wide block uppercase" contenteditable="true">民國 85.10 - 91.03</span>
+                            <h4 class="text-sm font-bold text-stone-800 mt-1" contenteditable="true">台北 Julia wedding news 婚紗</h4>
+                            <p class="text-xs text-stone-600 mt-1" contenteditable="true">
+                                <strong>門市副理</strong>｜管理門市業務與訂單、安排人力調配、督導行政流程並落實公司營運績效。
+                            </p>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- 關於我 -->
+                <section class="card-section">
+                    <h3 class="text-base font-bold text-stone-800 pb-2 mb-4 border-b-2 border-stone-100 flex items-center gap-2">
+                        <span class="w-1 h-4 bg-amber-700 accent-bg rounded"></span> 關於我
+                    </h3>
+                    <div id="introContainer" class="text-xs text-stone-600 space-y-2.5 leading-relaxed text-justify">
+                        <p contenteditable="true">
+                            您好，我是鄭雅蓁。我熱愛與人互動，自學生時期的打工起便深耕服務業，在工作中磨練出敬業態度也並養成積極合群的良好個性。因為所學科系是服裝設計，我天生熱愛美的事物，踏入社會的第一站便選擇了婚紗攝影產業，將美感融入專業服務中。
+                        </p>
+                        <p contenteditable="true">
+                            憑藉著對喜宴婚禮流程與細節的極高熟悉度，我隨後進入飯店產業，負責婚宴訂席、客製化喜宴接洽以及大型會議講座的流程規劃與全程統籌。在職涯中，我將溝通協調視為不斷挑戰與突破自我的核心能力。
+                        </p>
+                        <p contenteditable="true">
+                            因為是職業婦女，所以在職場與家庭中必須斷斷續續的連接，再停職時，也會主動進修、學習不同的系統規劃與mos操作，讓自己在多變的市場環境中持續成長。
+                        </p>
+                        <p contenteditable="true">
+                            我期許自己不斷邁進。我將會持續培養自身的專業素養與產業知識，強化個人思考及解決問題的能力，以圓滿達成公司交付的各項任務與業績目標；長期而言，我將在工作之餘不斷充實專業能力，加強問題改善與任務執行力，以沉穩且靈活的應變能力，迎向未來更多元化的挑戰。
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 專業優點 -->
+                <section class="card-section">
+                    <h3 class="text-base font-bold text-stone-800 pb-2 mb-4 border-b-2 border-stone-100 flex items-center gap-2">
+                        <span class="w-1 h-4 bg-amber-700 accent-bg rounded"></span> 專業優點
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        
+                        <!-- 優點 1 -->
+                        <div class="bg-stone-50/70 p-3.5 rounded-xl border border-stone-100 transition-shadow hover:shadow-sm">
+                            <h4 class="text-xs font-bold text-stone-800 flex items-center gap-2">
+                                <i class="fa-solid fa-circle-check text-amber-700 accent-text"></i> 
+                                <span contenteditable="true">訂席與喜宴規劃</span>
+                            </h4>
+                            <p class="text-[11px] text-stone-500 mt-1.5 leading-relaxed pl-5" contenteditable="true">憑藉世貿聯誼社與知名婚紗品牌多年的資歷，對精緻宴席、大型活動控場極具實務經驗。</p>
+                        </div>
+
+                        <!-- 優點 2 -->
+                        <div class="bg-stone-50/70 p-3.5 rounded-xl border border-stone-100 transition-shadow hover:shadow-sm">
+                            <h4 class="text-xs font-bold text-stone-800 flex items-center gap-2">
+                                <i class="fa-solid fa-users text-amber-700 accent-text"></i> 
+                                <span contenteditable="true">高端客群溝通協調</span>
+                            </h4>
+                            <p class="text-[11px] text-stone-500 mt-1.5 leading-relaxed pl-5" contenteditable="true">善於服務頂級會員及企業商務人士，具備極佳的洞察力，能優雅得體地化解客訴並贏得信賴。</p>
+                        </div>
+
+                        <!-- 優點 3 -->
+                        <div class="bg-stone-50/70 p-3.5 rounded-xl border border-stone-100 transition-shadow hover:shadow-sm">
+                            <h4 class="text-xs font-bold text-stone-800 flex items-center gap-2">
+                                <i class="fa-solid fa-handshake text-amber-700 accent-text"></i> 
+                                <span contenteditable="true">高情商與團隊合作</span>
+                            </h4>
+                            <p class="text-[11px] text-stone-500 mt-1.5 leading-relaxed pl-5" contenteditable="true">重視與同事間的群體共榮，擅長在快節奏與高壓的餐飲、服務業環境中進行高效跨部門整合。</p>
+                        </div>
+
+                        <!-- 優點 4 -->
+                        <div class="bg-stone-50/70 p-3.5 rounded-xl border border-stone-100 transition-shadow hover:shadow-sm">
+                            <h4 class="text-xs font-bold text-stone-800 flex items-center gap-2">
+                                <i class="fa-solid fa-chart-line text-amber-700 accent-text"></i> 
+                                <span contenteditable="true">積極自省持續成長</span>
+                            </h4>
+                            <p class="text-[11px] text-stone-500 mt-1.5 leading-relaxed pl-5" contenteditable="true">能主動檢視自身不足，透過實務參與及自主學習掌握新型態管理系統與行政作業，力求精益求精。</p>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- 證照與技能 -->
+                <section class="card-section mb-2">
+                    <h3 class="text-base font-bold text-stone-800 pb-2 mb-4 border-b-2 border-stone-100 flex items-center gap-2">
+                        <span class="w-1 h-4 bg-amber-700 accent-bg rounded"></span> 證照與專業技能
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        
+                        <!-- 證照卡片 -->
+                        <div class="bg-stone-50/50 rounded-xl border border-stone-200 overflow-hidden group">
+                            <!-- 證照圖示區 / 點擊開啟自訂與放大 -->
+                            <div class="aspect-[1.5/1] bg-stone-100 relative cursor-pointer overflow-hidden flex flex-col items-center justify-center border-b border-stone-200" onclick="triggerCertUpload()">
+                                <img id="certThumbnail" src="https://raw.githubusercontent.com/fioncheng889-ship-it/20260601-ya-2/main/licens.png" class="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300 block" onerror="handleCertError()">
+                                
+                                <!-- 自製高階向量證照 fallback -->
+                                <div id="certFallback" class="hidden absolute inset-0 bg-gradient-to-br from-stone-100 to-stone-200 flex flex-col items-center justify-center p-4 text-center">
+                                    <div class="w-12 h-12 rounded-xl bg-amber-600/10 text-amber-700 accent-text flex items-center justify-center mb-2">
+                                        <i class="fa-regular fa-file-excel text-2xl"></i>
+                                    </div>
+                                    <span class="text-xs font-bold text-stone-800 leading-tight">MOS EXCEL Expert</span>
+                                    <span class="text-[10px] text-stone-400 mt-1">微軟大師級專業認證證照</span>
+                                    <button class="no-print mt-2 text-[10px] font-semibold text-amber-700 accent-text hover:underline"><i class="fa-solid fa-arrow-up-from-bracket mr-1"></i>上傳真實證書</button>
+                                </div>
+                                <input type="file" id="certInput" accept="image/*" class="hidden" onchange="previewCert(event)">
+                            </div>
+                            <div class="p-3 text-center bg-white">
+                                <h4 class="text-xs font-bold text-stone-800" contenteditable="true">Microsoft Office Specialist: Excel Expert</h4>
+                            </div>
+                        </div>
+
+                        <!-- 證照占位區二 -->
+                        <div class="border-2 border-dashed border-stone-200 rounded-xl p-4 flex flex-col items-center justify-center text-center bg-stone-50/20 group hover:border-amber-600/50 transition-colors">
+                            <div class="w-10 h-10 rounded-full bg-stone-100 text-stone-400 flex items-center justify-center mb-2 group-hover:text-amber-700 transition-colors">
+                                <i class="fa-solid fa-award text-lg"></i>
+                            </div>
+                            <h4 class="text-xs font-bold text-stone-700" contenteditable="true">💬 語文 / 專業工具預留證照二</h4>
+                            <p class="text-[10px] text-stone-400 mt-1" contenteditable="true">( 例如：品酒師認證、電腦製圖證，雙擊此處可自由更動內容 )</p>
+                        </div>
+
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Lightbox 相片放大顯示 (不列印) -->
+    <div id="lightbox" class="no-print fixed inset-0 bg-black/90 z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4 cursor-zoom-out" onclick="closeLightbox()">
+        <button class="absolute top-6 right-6 text-white hover:text-amber-500 text-2xl transition-colors cursor-pointer" onclick="event.stopPropagation(); closeLightbox();">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <img id="lightboxImg" src="" class="max-w-full max-h-[85vh] rounded-lg shadow-2xl transform scale-90 transition-transform duration-300">
+    </div>
+
+    <script>
+        // 核心狀態設定
+        let currentZoom = 1.0;
+        const root = document.documentElement;
+
+        // 系統色彩主題設定檔
+        const themes = {
+            gold: {
+                primary: '#B28F6E',
+                primaryDark: '#8C6A4A',
+                primaryLight: '#FAF5F0',
+                border: 'rgba(178, 143, 110, 0.15)',
+                gradient: 'linear-gradient(90deg, #D4AF37, #B28F6E)'
+            },
+            dark: {
+                primary: '#2D2625',
+                primaryDark: '#1C1716',
+                primaryLight: '#FAF8F6',
+                border: 'rgba(45, 38, 37, 0.15)',
+                gradient: 'linear-gradient(90deg, #5C5250, #2D2625)'
+            },
+            navy: {
+                primary: '#1e293b',
+                primaryDark: '#0f172a',
+                primaryLight: '#f1f5f9',
+                border: 'rgba(30, 41, 59, 0.15)',
+                gradient: 'linear-gradient(90deg, #475569, #1e293b)'
+            },
+            green: {
+                primary: '#115e59',
+                primaryDark: '#134e4a',
+                primaryLight: '#f0fdfa',
+                border: 'rgba(17, 94, 89, 0.15)',
+                gradient: 'linear-gradient(90deg, #0d9488, #115e59)'
+            }
+        };
+
+        // 一鍵切換主題
+        function changeTheme(themeKey) {
+            const config = themes[themeKey];
+            if (!config) return;
+
+            // 更新 CSS 變數
+            root.style.setProperty('--primary-color', config.primary);
+            root.style.setProperty('--primary-dark', config.primaryDark);
+            root.style.setProperty('--primary-light', config.primaryLight);
+            root.style.setProperty('--primary-border', config.border);
+
+            // 更新裝飾欄與文字背景
+            document.getElementById('themeBar').style.background = config.gradient;
+            
+            // 變更履歷中所有標籤與圖示樣式
+            document.querySelectorAll('.accent-text').forEach(el => {
+                el.style.color = config.primary;
+            });
+            document.querySelectorAll('.accent-bg').forEach(el => {
+                el.style.backgroundColor = config.primaryLight;
+                el.style.color = config.primary;
+            });
+
+            showToast(`主題已切換為：${getThemeName(themeKey)}`);
+        }
+
+        function getThemeName(key) {
+            switch(key) {
+                case 'gold': return '皇家經典金';
+                case 'dark': return '摩登奢華黑';
+                case 'navy': return '主管卓越藍';
+                case 'green': return '文雅松石綠';
+                default: return key;
+            }
+        }
+
+        // 字體大小滑桿調控
+        function adjustFontSize(val) {
+            document.getElementById('fontSizeVal').innerText = val + 'px';
+            const sheet = document.getElementById('resumeSheet');
+            
+            // 基礎履歷紙張內文字調整
+            sheet.style.fontSize = val + 'px';
+            
+            // 強制調整所有 p 標籤及 time 標籤
+            sheet.querySelectorAll('.timeline-desc, .adv-desc, #introContainer p, .timeline-time').forEach(el => {
+                el.style.fontSize = (parseFloat(val) - 1.5) + 'px';
+            });
+        }
+
+        // 畫布視覺縮放
+        function zoomCanvas(factor) {
+            currentZoom = Math.max(0.6, Math.min(1.4, currentZoom + factor));
+            applyZoom();
+        }
+
+        // 重設縮放 1:1
+        function resetZoom() {
+            currentZoom = 1.0;
+            applyZoom();
+        }
+
+        // 執行視覺縮放
+        function applyZoom() {
+            const container = document.getElementById('canvasContainer');
+            const percent = Math.round(currentZoom * 100);
+            document.getElementById('zoomLabel').innerText = percent + '%';
+            container.style.transform = `scale(${currentZoom})`;
+        }
+
+        // 智慧型 Toast 通知視窗
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('translate-y-10', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-10', 'opacity-0');
+            }, 2500);
+        }
+
+        // 模擬點擊頭像上傳檔案
+        function triggerAvatarUpload() {
+            document.getElementById('avatarInput').click();
+        }
+
+        // 預覽與上傳頭像
+        function previewAvatar(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('avatarImg').src = e.target.result;
+                    showToast('頭像更新成功！');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // 模擬點擊證照上傳或放大
+        function triggerCertUpload() {
+            const thumb = document.getElementById('certThumbnail');
+            // 如果證照圖片正常載入且非隱藏狀態，點選時直接開啟 Lightbox 放大模組
+            if (thumb && thumb.style.display !== 'none' && thumb.src) {
+                openLightbox(thumb.src);
+            } else {
+                document.getElementById('certInput').click();
+            }
+        }
+
+        // 證照防破圖容錯處理
+        function handleCertError() {
+            const thumb = document.getElementById('certThumbnail');
+            const fallback = document.getElementById('certFallback');
+            if (thumb) thumb.style.display = 'none';
+            if (fallback) {
+                fallback.style.display = 'flex';
+                fallback.classList.remove('hidden');
+            }
+        }
+
+        // 預覽證照檔案並更換備用
+        function previewCert(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const thumb = document.getElementById('certThumbnail');
+                    const fallback = document.getElementById('certFallback');
+                    if (thumb) {
+                        thumb.src = e.target.result;
+                        thumb.style.display = 'block';
+                    }
+                    if (fallback) {
+                        fallback.style.display = 'none';
+                        fallback.classList.add('hidden');
+                    }
+                    showToast('證書檔案載入成功，點擊可放大！');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Lightbox 放大模組
+        function openLightbox(src) {
+            const lightbox = document.getElementById('lightbox');
+            const img = document.getElementById('lightboxImg');
+            img.src = src;
+            lightbox.classList.remove('hidden');
+            setTimeout(() => {
+                lightbox.classList.add('opacity-100');
+                img.classList.remove('scale-90');
+                img.classList.add('scale-100');
+            }, 50);
+            document.body.classList.add('lightbox-active');
+        }
+
+        // 關閉 Lightbox
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            const img = document.getElementById('lightboxImg');
+            lightbox.classList.remove('opacity-100');
+            img.classList.remove('scale-100');
+            img.classList.add('scale-90');
+            setTimeout(() => {
+                lightbox.classList.add('hidden');
+            }, 300);
+            document.body.classList.remove('lightbox-active');
+        }
+
+        // 監控 ESC 關閉放大功能
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeLightbox();
+        });
+
+        // 頁面初始化完成設定
+        window.onload = function() {
+            // 預載皇家金砂主題色彩
+            changeTheme('gold');
+            // 初始化字體微調
+            adjustFontSize('14.5');
+        };
+    </script>
+</body>
+</html>
